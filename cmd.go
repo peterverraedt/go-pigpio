@@ -1,31 +1,68 @@
 package pigpio
 
-//Command Code Refer: http://abyz.co.uk/rpi/pigpio/sif.html
-const (
-	CmdWrite uint32 = 4
-	CmdServo uint32 = 8
-)
-
-//Command Struct Refer: http://abyz.co.uk/rpi/pigpio/sif.html#cmdCmd_t
-type Command struct {
-	Code uint32
-	P1   uint32
-	P2   uint32
-	P3   uint32
-}
-
-//Sets the GPIO level, on or off.
-func (cli *Client) Write(pin uint32, isHigh bool) (Command, error) {
-	cmd := Command{CmdWrite, pin, 1, 0}
-	if isHigh {
-		cmd.P2 = 0
+// SetMode sets the pin mode.
+func (cli *Client) SetMode(pin Pin, mode Mode) error {
+	request := Request{
+		Code: CmdModeSet,
+		P1:   uint32(pin),
+		P2:   uint32(mode),
 	}
 
-	return cli.runCommand(cmd)
+	_, err := cli.runCommand(request)
+
+	return err
 }
 
-//Starts servo pulses, pulseWidth should be 0 (off), 500 (most anti-clockwise) to 2500 (most clockwise).
-func (cli *Client) SetServoPulseWidth(pin uint32, pulseWidth uint32) (Command, error) {
-	cmd := Command{CmdServo, pin, pulseWidth, 0}
-	return cli.runCommand(cmd)
+// GetMode gets the pin mode.
+func (cli *Client) GetMode(pin Pin) (Mode, error) {
+	request := Request{
+		Code: CmdModeGet,
+		P1:   uint32(pin),
+	}
+
+	response, err := cli.runCommand(request)
+
+	return Mode(response.Result), err
+}
+
+// Read gets the GPIO level, high or low.
+func (cli *Client) Read(pin Pin) (isHigh bool, err error) {
+	request := Request{
+		Code: CmdRead,
+		P1:   uint32(pin),
+	}
+
+	response, err := cli.runCommand(request)
+
+	return response.Result > 0, err
+}
+
+// Write sets the GPIO level, high or low.
+func (cli *Client) Write(pin Pin, isHigh bool) error {
+	request := Request{
+		Code: CmdWrite,
+		P1:   uint32(pin),
+		P2:   1,
+	}
+
+	if isHigh {
+		request.P2 = 0
+	}
+
+	_, err := cli.runCommand(request)
+
+	return err
+}
+
+// SetServoPulseWidth starts servo pulses, pulseWidth should be 0 (off), 500 (most anti-clockwise) to 2500 (most clockwise).
+func (cli *Client) SetServoPulseWidth(pin uint32, pulseWidth uint32) error {
+	request := Request{
+		Code: CmdServo,
+		P1:   uint32(pin),
+		P2:   pulseWidth,
+	}
+
+	_, err := cli.runCommand(request)
+
+	return err
 }
